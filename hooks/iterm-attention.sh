@@ -39,6 +39,7 @@ set_waiting() {
     printf '\033]6;1;bg;green;brightness;230\007' > "$TTY_PATH"
     printf '\033]6;1;bg;blue;brightness;0\007' > "$TTY_PATH"
     printf '\033]1337;SetColors=bg=001a00\007' > "$TTY_PATH"
+    afplay /System/Library/Sounds/Blow.aiff &>/dev/null &
 }
 
 clear_waiting() {
