@@ -67,7 +67,11 @@ except Exception:
     sys.exit(0)
 
 def fmt(n):
-    return f'{n/1000:.1f}k' if n >= 1000 else str(n)
+    if n >= 1_000_000:
+        return f'{n/1_000_000:.1f}m'
+    if n >= 1000:
+        return f'{n/1000:.1f}k'
+    return str(n)
 
 if model:
     with open(f'{marker}/model-{session_key}', 'w') as f:
