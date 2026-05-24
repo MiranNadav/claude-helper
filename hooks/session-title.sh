@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Sets terminal window/tab title to the first user message of the Claude session.
-# Runs on every UserPromptSubmit; no-ops after the first message per session.
+# Sets terminal window/tab title to the latest user message each turn.
 
 INPUT=$(cat)
 
+mkdir -p /tmp/claude-helper
+echo "[$(date '+%H:%M:%S')] session-title triggered" >> /tmp/claude-helper/hooks.log
+
 MARKER_DIR="/tmp/claude-helper"
-mkdir -p "$MARKER_DIR"
 
 SESSION_ID=$(echo "$INPUT" | python3 -c "
 import sys, json
@@ -13,29 +14,54 @@ d = json.load(sys.stdin)
 print(d.get('session_id', 'unknown'))
 " 2>/dev/null)
 
-MARKER="$MARKER_DIR/$SESSION_ID"
+touch "$MARKER_DIR/$SESSION_ID"
 
-if [ ! -f "$MARKER" ]; then
-    PROMPT=$(echo "$INPUT" | python3 -c "
+PROMPT=$(echo "$INPUT" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
 p = d.get('prompt', '').strip().replace('\n', ' ')
 print(p[:80])
 " 2>/dev/null)
-    touch "$MARKER"
-    # /dev/tty unavailable when Claude detaches controlling terminal from hook subprocess.
-    # Walk process tree to find the actual TTY device (macOS: ps tty 's003' -> /dev/ttys003).
-    TTY_PATH=""
-    PID=$$
-    while [ "$PID" -gt 1 ] && [ -z "$TTY_PATH" ]; do
-        TTY_NAME=$(ps -p "$PID" -o tty= 2>/dev/null | tr -d ' ')
-        if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ]; then
-            TTY_PATH="/dev/tty${TTY_NAME}"
+
+# Normalise TTY name from ps output (may be 'ttys005' or 's005' on macOS)
+normalise_tty() {
+    local t="$1"
+    if [[ "$t" == tty* ]]; then
+        echo "/dev/$t"
+    else
+        echo "/dev/tty$t"
+    fi
+}
+
+# Walk process tree to find TTY
+find_tty() {
+    local PID=$$
+    while [[ "$PID" -gt 1 ]]; do
+        local T
+        T=$(ps -p "$PID" -o tty= 2>/dev/null | tr -d ' ')
+        if [[ -n "$T" && "$T" != "??" ]]; then
+            echo "$T"
+            return
         fi
         PID=$(ps -p "$PID" -o ppid= 2>/dev/null | tr -d ' ')
+        [[ -z "$PID" ]] && break
     done
+}
 
-    if [ -n "$TTY_PATH" ] && [ -e "$TTY_PATH" ]; then
-        printf '\033]0;%s\007' "$PROMPT" > "$TTY_PATH"
-    fi
+RAW_TTY=$(find_tty)
+[[ -z "$RAW_TTY" ]] && exit 0
+
+TTY_PATH=$(normalise_tty "$RAW_TTY")
+
+# Determine session key for label file
+if [[ -n "$ITERM_SESSION_ID" ]]; then
+    SESSION_KEY="iterm-${ITERM_SESSION_ID}"
+else
+    SESSION_KEY="tty-${RAW_TTY}"
 fi
+
+echo "$PROMPT" > "$MARKER_DIR/label-${SESSION_KEY}"
+
+[[ -e "$TTY_PATH" ]] && printf '\033]0;%s\007' "$PROMPT" > "$TTY_PATH"
+
+exit 0
