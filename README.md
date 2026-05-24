@@ -37,6 +37,17 @@ chmod +x ~/Repositories/claude-helper/hooks/*.sh
 
 ### 3. Wire hooks into `~/.claude/settings.json`
 
+Run the install script — it merges the hook entries into your existing `~/.claude/settings.json` without overwriting anything else:
+
+```bash
+bash ~/Repositories/claude-helper/install.sh
+```
+
+The script is idempotent; running it again is safe. It exits with a summary of what was added (or "nothing to do" if already installed).
+
+<details>
+<summary>Manual configuration (if you prefer)</summary>
+
 Add the following under the `"hooks"` key. Adjust the repo path if you cloned elsewhere.
 
 ```json
@@ -46,66 +57,29 @@ Add the following under the `"hooks"` key. Adjust the repo path if you cloned el
       {
         "matcher": "",
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/session-title.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\""
-          }
+          { "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/session-title.sh\"" },
+          { "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\"" }
         ]
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\""
-          }
-        ]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\"" }] }
     ],
     "PostToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\""
-          }
-        ]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\"" }] }
     ],
     "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\""
-          }
-        ]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/iterm-attention.sh\"" }] }
     ],
     "StatusLine": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/statusline.sh\""
-          }
-        ]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "bash \"/Users/YOUR_USERNAME/Repositories/claude-helper/hooks/statusline.sh\"" }] }
     ]
   }
 }
 ```
 
 Replace `YOUR_USERNAME` with your macOS username.
+</details>
 
 ### 4. Restart Claude Code
 
