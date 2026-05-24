@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# Persists model + cumulative token stats from transcript for statusline.
-# Fires on UserPromptSubmit and Stop.
+# Fires on PreToolUse, PostToolUse, UserPromptSubmit, Stop.
 
 INPUT=$(cat)
 MARKER_DIR="/tmp/claude-helper"
 mkdir -p "$MARKER_DIR"
-
-echo "[$(date '+%H:%M:%S')] iterm-attention triggered ITERM_SESSION_ID=${ITERM_SESSION_ID}" >> "$MARKER_DIR/hooks.log"
 
 # Walk process tree to find TTY
 PID=$$
@@ -23,7 +20,6 @@ done
 
 [[ -z "$TTY_PATH" || ! -e "$TTY_PATH" ]] && exit 0
 
-# Derive session key (mirrors session-title.sh and statusline.sh)
 RAW_TTY="${TTY_PATH#/dev/}"
 if [[ -n "$ITERM_SESSION_ID" ]]; then
     SESSION_KEY="iterm-${ITERM_SESSION_ID}"
@@ -34,9 +30,35 @@ fi
 HOOK_EVENT=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('hook_event_name',''))" 2>/dev/null)
 TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('transcript_path',''))" 2>/dev/null)
 
-# Parse transcript on Stop — response is complete so data is fresh
-if [[ "$HOOK_EVENT" == "Stop" && -f "$TRANSCRIPT_PATH" ]]; then
-    python3 - "$TRANSCRIPT_PATH" "$MARKER_DIR" "$SESSION_KEY" << 'PYEOF'
+# Always clear any stale badge
+printf '\033]1337;SetBadgeFormat=%s\007' "$(echo -n '' | base64)" > "$TTY_PATH"
+
+set_waiting() {
+    printf '\033]1337;SetColors=tab=00E600\007' > "$TTY_PATH"
+    printf '\033]6;1;bg;red;brightness;0\007' > "$TTY_PATH"
+    printf '\033]6;1;bg;green;brightness;230\007' > "$TTY_PATH"
+    printf '\033]6;1;bg;blue;brightness;0\007' > "$TTY_PATH"
+    printf '\033]1337;SetColors=bg=001a00\007' > "$TTY_PATH"
+}
+
+clear_waiting() {
+    printf '\033]6;1;bg;red;brightness;0\007' > "$TTY_PATH"
+    printf '\033]6;1;bg;green;brightness;0\007' > "$TTY_PATH"
+    printf '\033]6;1;bg;blue;brightness;0\007' > "$TTY_PATH"
+    printf '\033]111\007' > "$TTY_PATH"
+}
+
+case "$HOOK_EVENT" in
+    PreToolUse)
+        set_waiting
+        ;;
+    PostToolUse|UserPromptSubmit)
+        clear_waiting
+        ;;
+    Stop)
+        clear_waiting
+        if [[ -f "$TRANSCRIPT_PATH" ]]; then
+            python3 - "$TRANSCRIPT_PATH" "$MARKER_DIR" "$SESSION_KEY" << 'PYEOF'
 import json, sys
 
 path, marker, session_key = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -81,9 +103,10 @@ tokens = f'in:{fmt(total_input + total_cache_read)} out:{fmt(total_output)}'
 with open(f'{marker}/tokens-{session_key}', 'w') as f:
     f.write(tokens)
 PYEOF
-fi
+        fi
+        ;;
+esac
 
-# Write to iTerm2 status bar user variable
 MODEL=$(cat "$MARKER_DIR/model-${SESSION_KEY}" 2>/dev/null)
 LABEL=$(cat "$MARKER_DIR/label-${SESSION_KEY}" 2>/dev/null)
 TOKENS=$(cat "$MARKER_DIR/tokens-${SESSION_KEY}" 2>/dev/null)
