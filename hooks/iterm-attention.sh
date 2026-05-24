@@ -39,6 +39,7 @@ set_waiting() {
     printf '\033]6;1;bg;green;brightness;230\007' > "$TTY_PATH"
     printf '\033]6;1;bg;blue;brightness;0\007' > "$TTY_PATH"
     printf '\033]1337;SetColors=bg=001a00\007' > "$TTY_PATH"
+    afplay /System/Library/Sounds/Blow.aiff &>/dev/null &
 }
 
 clear_waiting() {
@@ -50,7 +51,14 @@ clear_waiting() {
 
 case "$HOOK_EVENT" in
     PreToolUse)
-        set_waiting
+        TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null)
+        case "$TOOL_NAME" in
+            Read|Glob|Grep|LS|WebSearch|WebFetch|TodoRead|TaskGet|TaskList|TaskOutput|Bash)
+                ;;  # never needs user approval
+            *)
+                set_waiting
+                ;;
+        esac
         ;;
     PostToolUse|UserPromptSubmit)
         clear_waiting
