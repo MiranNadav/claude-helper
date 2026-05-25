@@ -30,11 +30,10 @@ Session key is `iterm-<ITERM_SESSION_ID>` when inside iTerm2, otherwise `tty-<TT
 | File | Event(s) | What it does |
 |------|----------|-------------|
 | `hooks/session-title.sh` | `UserPromptSubmit` | Sets terminal window/tab title to current prompt; writes label to marker file |
-| `hooks/iterm-attention.sh` | `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop` | On `PreToolUse`: highlights iTerm2 tab green + plays sound when the tool requires user approval; clears on `PostToolUse`/`UserPromptSubmit`; on `Stop`: parses transcript, writes model + token marker files, sets iTerm2 user var `claude_status` |
+| `hooks/iterm-attention.sh` | `PermissionRequest`, `PostToolUse`, `UserPromptSubmit`, `Stop` | On `PermissionRequest`: highlights iTerm2 tab green + plays sound when user is prompted for tool approval; clears on `PostToolUse`/`UserPromptSubmit`; on `Stop`: parses transcript, writes model + token marker files, sets iTerm2 user var `claude_status` |
 | `hooks/statusline.sh` | `StatusLine` | Reads marker files, outputs `label \| tokens \| model` to Claude Code's status bar |
 
-Tools that never require approval (skipped by `iterm-attention.sh`):
-`Read`, `Glob`, `Grep`, `LS`, `WebSearch`, `WebFetch`, `TodoRead`, `TaskGet`, `TaskList`, `TaskOutput`, `Bash`
+Approval detection uses the `PermissionRequest` hook event, which fires only when Claude Code is about to show a permission prompt to the user. No allowlist needed.
 
 ## Installing a new hook
 

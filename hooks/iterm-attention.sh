@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fires on PreToolUse, PostToolUse, UserPromptSubmit, Stop.
+# Fires on PermissionRequest, PostToolUse, UserPromptSubmit, Stop.
 
 INPUT=$(cat)
 MARKER_DIR="/tmp/claude-helper"
@@ -50,15 +50,8 @@ clear_waiting() {
 }
 
 case "$HOOK_EVENT" in
-    PreToolUse)
-        TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null)
-        case "$TOOL_NAME" in
-            Read|Glob|Grep|LS|WebSearch|WebFetch|TodoRead|TaskGet|TaskList|TaskOutput|Bash)
-                ;;  # never needs user approval
-            *)
-                set_waiting
-                ;;
-        esac
+    PermissionRequest)
+        set_waiting
         ;;
     PostToolUse|UserPromptSubmit)
         clear_waiting
