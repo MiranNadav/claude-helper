@@ -58,6 +58,7 @@ case "$HOOK_EVENT" in
         ;;
     Stop)
         clear_waiting
+        afplay /System/Library/Sounds/Glass.aiff &>/dev/null &
         if [[ -f "$TRANSCRIPT_PATH" ]]; then
             python3 - "$TRANSCRIPT_PATH" "$MARKER_DIR" "$SESSION_KEY" << 'PYEOF'
 import json, sys
